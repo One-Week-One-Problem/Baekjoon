@@ -145,6 +145,7 @@ int main() {
     //     }
     // }
 
+    
     // 디버깅용 입력
     int grid_row = 5, grid_col = 5, time_delay = 1, time_total = 3, num_init = 2, num_building = 3;
     vector<vector<char>> grid = {
