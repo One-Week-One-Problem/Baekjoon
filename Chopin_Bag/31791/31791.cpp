@@ -18,6 +18,9 @@ enum class State{
 class Virus {
     public:
         State state_;
+        int row_, col_; // public으로 변경 또는 getter 함수 제공 필요
+        int infection_lv_=0; // public으로 변경 또는 getter/setter 제공 필요
+
         Virus()= default;
         Virus(int row, int col, State state=State::INFECTED)
         :row_{row}, col_{col}, state_{state}
@@ -41,69 +44,79 @@ class Virus {
                    state_ == other.state_; // 상태도 동일성 판단에 포함
         }
 
-        vector<Virus> propagate(const vector<vector<bool>> is_building, const int time_delay, 
+        vector<Virus> propagate(const vector<vector<bool>>& is_building, const int time_delay, 
             const int size_row, const int size_col,
-            vector<pair<int, int>>& virus_pos, vector<Virus>& viruses){
+            const vector<Virus>& current_viruses, const vector<Virus>& temp_new_viruses){ // 파라미터 변경
 
             vector<Virus> ret_vec;
 
             if(is_building[row_][col_] && state_ == State::PROPAGATING){
                 if(infection_lv_ == time_delay) {
-                    state_ = State::INFECTED;
-                    cout << get_status() << "(building) status changed : P -> I" << endl; // 디버깅용 출력
+                    state_ = State::INFECTED; // 상태만 변경
+                    // cout << get_status() << "[STATUS][B] P -> I" << endl; // 디버깅용 출력
                 }
-                else infection_lv_++;
+                else {
+                    infection_lv_++;
+                    // cout << get_status() << "[STATUS][B] infection lv" << infection_lv_-1 << "->" << infection_lv_ << endl; // 디버깅용 출력
+                }
+                return ret_vec; // 이번 턴 전파 없음
             }
 
-            if(state_ == State::PROPAGATING){
-               state_ = State::INFECTED;
-               cout << get_status() << "status changed : P -> I" << endl; // 디버깅용 출력
-               virus_pos.emplace_back(make_pair(row_,col_));
-               return ret_vec; 
+            if(state_ == State::PROPAGATING){ // 건물 아닌 곳의 PROPAGATING
+               state_ = State::INFECTED; // 상태만 변경
+               // cout << get_status() << "[STATUS] P -> I" << endl; // 디버깅용 출력
+               return ret_vec; // 이번 턴 전파 없음
             }
 
-            vector<pair<int,int>> offsets{{1,0}, {0,1}, {-1,0}, {0,-1}};
-            
-            cout << "[TEST] " << row_+1 << "," << col_+1 << endl; // 디버깅용 출력
+            // INFECTED 상태일 때만 전파 시도
+            if (state_ == State::INFECTED) {
+                vector<pair<int,int>> offsets{{1,0}, {0,1}, {-1,0}, {0,-1}};
+                
+                // cout << "_____________________________________________________________________" << endl;
+                // cout << "[TEST] " << get_status() << " is INFECTED and trying to spread\n" << endl; // 디버깅용 출력
+                
+                for (auto p : offsets){
+                    int next_row = row_ + p.first;
+                    int next_col = col_ + p.second;
 
-            
-            for (auto p : offsets){
+                    // cout << "[OFFSET] (" << p.first << "," << p.second << ")" << " | "; // 디버깅용 출력
 
-                cout << "[OFFSET] (" << p.first << "," << p.second << ")" << endl; // 디버깅용 출력
-
-                if(status_check(row_+p.first, col_+p.second, size_row, size_col, virus_pos, viruses)){
-                    ret_vec.emplace_back(Virus(row_+p.first, col_+p.second, State::PROPAGATING));
+                    if(status_check(next_row, next_col, size_row, size_col, current_viruses, temp_new_viruses)){
+                        ret_vec.emplace_back(Virus(next_row, next_col, State::PROPAGATING));
+                    }
                 }
             }
             return ret_vec;
         }
 
         // row, col : 확인할 칸의 좌표정보, size_row, col : 전체 보드의 크기정보
-
         bool status_check(int row, int col, int size_row, int size_col,
-            vector<pair<int, int>> virus_pos, vector<Virus> viruses){
+            const vector<Virus>& current_viruses, const vector<Virus>& temp_new_viruses){ // 파라미터 변경
 
-            cout << "[POINT] " << row+1 << "," << col+1 << endl; // 디버깅용 출력
+            // cout << "[POINT] " << row+1 << "," << col+1 << " | "; // 디버깅용 출력
 
             if(row < 0 || col < 0 || row >= size_row || col >= size_col) {
-
-                cout << "Invalid : size issue" << '\n' << endl; // 디버깅용 출력
-                return false;
-            }
-            if(find(virus_pos.begin(), virus_pos.end(),make_pair(row, col)) != virus_pos.end()){
-
-                cout << "Invalid : virus infected" << '\n'  << endl; // 디버깅용 출력
-                return false;
-            }
-            if(find_if(viruses.begin(), viruses.end(), [row, col](Virus i){
-                return (i.row_ == row) && (i.col_ == col) && (i.state_ == State::PROPAGATING);
-            }) != viruses.end()) {
-
-                cout << "Invalid : virus propagating" << '\n'  << endl; // 디버깅용 출력
+                // cout << "Invalid : size issue" << '\n' << endl; // 디버깅용 출력
                 return false;
             }
 
-            cout << "Valid\n" << endl; // 디버깅용 출력
+            // current_viruses 목록에서 해당 위치에 INFECTED 또는 PROPAGATING 바이러스가 있는지 확인
+            for(const auto& v : current_viruses) {
+                if (v.row_ == row && v.col_ == col) {
+                    // cout << "Invalid : virus (state: " << (int)v.state_ << ") already exists in current_viruses" << '\n' << endl; // 디버깅용 출력
+                    return false; // 이미 어떤 상태로든 바이러스가 존재하면 전파 불가
+                }
+            }
+
+            // temp_new_viruses (이번 턴에 새로 생성된 PROPAGATING 바이러스) 목록에 있는지 확인
+            for(const auto& v : temp_new_viruses) {
+                 if (v.row_ == row && v.col_ == col) {
+                    // cout << "Invalid : virus (PROPAGATING) already exists in temp_new_viruses" << '\n' << endl; // 디버깅용 출력
+                    return false;
+                 }
+            }
+            
+            // cout << "Valid\n" << endl; // 디버깅용 출력
             return true;
         }
         
@@ -112,96 +125,65 @@ class Virus {
             return "(" + to_string(row_+1) + "," + to_string(col_+1) + ")";
         }
 
-    private:
-    int row_, col_;
-    int infection_lv_=0;
+    // private: // 멤버 변수 접근을 위해 public으로 변경 또는 getter/setter 필요
+    // int row_, col_;
+    // int infection_lv_=0;
 };
 
 
 
 int main() {
-    
-    // cout << "Enter the size of Grid: Row Column: " << endl; // 디버깅용 출력
-    // int grid_row, grid_col;
-    // cin >> grid_row >> grid_col;
-    // cin.ignore();
-
-    // cout << "Enter the delayed time, the spreading time,"
-    // << " the number of building, the number of initial virus point: " << endl; // 디버깅용 출력
-    // int time_delay, time_total, num_init, num_building;
-    // string line;
-    // getline(cin, line); 
-    // stringstream ss(line);
-    // ss >> time_delay >> time_total >> num_init >> num_building;
-
-    // vector<string> grid(grid_row, string(grid_col, ' ')); // 입력
-    // for (int i = 0; i < grid_row; ++i) {
-    //     getline(cin, line);
-    //     stringstream row_ss(line);
-    //     int col = 0;
-    //     char cell;
-    //     while (row_ss >> cell && col < grid_col) {
-    //         grid[i][col++] = cell;
-    //     }
-    // }
-
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+    cout.tie(NULL);
     
     // 디버깅용 입력
-    int grid_row = 5, grid_col = 5, time_delay = 1, time_total = 3, num_init = 2, num_building = 3;
-    vector<vector<char>> grid = {
+    int grid_row = 5, grid_col = 5, time_delay = 1, time_total = 3;
+    // int num_init = 2, num_building = 3; // 이 변수들은 현재 사용되지 않음
+    vector<vector<char>> grid_input = { // grid_input으로 변경하여 is_building과 구분
     {'.','.','.','.','.'},
     {'.','.','*','#','.'},
     {'.','*','#','.','.'},
     {'.','.','#','.','.'}, 
     {'.','.','.','.','.'}
-};
+    };
 
-    // 바이러스 위치 및 건물 위치 파악
-    vector<pair<int, int>> virus_pos; // 바이러스 현황
+    vector<Virus> viruses; // 바이러스 객체 벡터
     vector<vector<bool>> is_building(grid_row, vector<bool>(grid_col, false)); // 빌딩이 있는가?
+
     for (int i = 0; i < grid_row; ++i) {
         for (int j = 0; j < grid_col; ++j) {
-            if (grid[i][j] == '*') {
-                virus_pos.emplace_back(i, j);
-            } else if (grid[i][j] == '#') {
+            if (grid_input[i][j] == '*') {
+                viruses.emplace_back(Virus(i, j, State::INFECTED)); // 초기 감염 바이러스
+            } else if (grid_input[i][j] == '#') {
                 is_building[i][j] = true;
             }
         }
     }
 
-    // 여기까지가 입력처리
-    // 입력값 검증
-
-    // 바이러스 객체 벡터
-    vector<Virus> viruses;
-    // 초기화 설정
-    for(auto i : virus_pos){
-        viruses.emplace_back(Virus(i.first, i.second, State::INFECTED));
-    }
-
-
-    // // 시뮬레이션 시작 : 전체 반복
+    // 시뮬레이션 시작 : 전체 반복
     for(int t = 0; t < time_total; ++t){
-        // 바이러스 객체 별로 1시간 동안의 행위 시작
-        vector<Virus> temp_vec;
-        for (Virus& v : viruses){
-            vector<Virus> bin = v.propagate(is_building,time_delay, grid_row, grid_col, virus_pos, viruses);
-            temp_vec.insert(temp_vec.end(),bin.begin(),bin.end());
+        vector<Virus> temp_newly_propagated_viruses; // 이번 턴에 새로 전파된 바이러스들
+        
+        size_t current_virus_count = viruses.size(); // 루프 시작 시점의 바이러스 수
+        for (size_t i = 0; i < current_virus_count; ++i) {
+            // propagate 함수는 바이러스 자신의 상태를 변경하거나, 새로운 바이러스를 생성함
+            // propagate 호출 시 current_viruses와 temp_newly_propagated_viruses를 const&로 전달
+            vector<Virus> propagated_in_this_step = viruses[i].propagate(is_building, time_delay, grid_row, grid_col, viruses, temp_newly_propagated_viruses);
+            temp_newly_propagated_viruses.insert(temp_newly_propagated_viruses.end(), propagated_in_this_step.begin(), propagated_in_this_step.end());
         }
-        viruses.insert(viruses.end(),temp_vec.begin(),temp_vec.end());
-    }
-    sort(viruses.begin(), viruses.end());
-    viruses.erase(std::unique(viruses.begin(), viruses.end()), viruses.end());
+        
+        viruses.insert(viruses.end(), temp_newly_propagated_viruses.begin(), temp_newly_propagated_viruses.end());
 
-    // 1회만 시행
-    // vector<Virus> temp_vec;
-    // for (Virus& v : viruses){
-    //     vector<Virus> bin = v.propagate(is_building,time_delay, grid_row, grid_col, virus_pos, viruses);
-    //     temp_vec.insert(temp_vec.end(),bin.begin(),bin.end());
-    // }
-    // viruses.insert(viruses.end(),temp_vec.begin(),temp_vec.end());
-    
-    for(Virus& i : viruses){
-        cout << i.get_status() << endl;
+        // 매 턴 종료 후 중복 제거 및 정렬
+        sort(viruses.begin(), viruses.end());
+        viruses.erase(std::unique(viruses.begin(), viruses.end()), viruses.end());
     }
+
+    // 바이러스 현황 출력 (문제의 요구사항에 따라 INFECTED 상태만 출력할 수도 있음)
+    for(auto& v : viruses){ // const auto& 사용
+        cout << v.get_status() << endl;
+    }
+
+    return 0;
 }
