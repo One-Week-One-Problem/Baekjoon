@@ -48,9 +48,15 @@ def shortest_path(cost_matrix, all_city_list):
 
 def total_cost(cost_matrix, city_list):
     result = 0
+    if cost_matrix[city_list[-1] - 1][city_list[0] - 1] == 0:
+        return 100000000
+    else:
+        result += cost_matrix[city_list[-1] - 1][city_list[0] - 1]
     for i in range(len(city_list) - 1):
-        result += cost_matrix[city_list[i] - 1][city_list[i + 1] - 1]
-    result += cost_matrix[city_list[-1] - 1][city_list[0] - 1]
+        if cost_matrix[city_list[i] - 1][city_list[i + 1] - 1] == 0:
+            return 100000000
+        else:
+            result += cost_matrix[city_list[i] - 1][city_list[i + 1] - 1]
     return result
 
 
