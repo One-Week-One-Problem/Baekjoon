@@ -1,0 +1,1 @@
+{"name":"Local: Pb_10971","url":"c:\\Users\\user\\OneDrive\\바탕 화면\\BAEKJOON\\Baekjoon\\Keroro\\Pb_10971.py","tests":[{"id":1747560488742,"input":"4\n0 10 15 20\n5 0 9 10\n6 13 0 12\n8 8 9 0","output":"35"}],"interactive":false,"memoryLimit":1024,"timeLimit":3000,"srcPath":"c:\\Users\\user\\OneDrive\\바탕 화면\\BAEKJOON\\Baekjoon\\Keroro\\Pb_10971.py","group":"local","local":true}
