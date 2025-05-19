@@ -19,32 +19,23 @@ def combination(base_city_list, present_city_list, depth):
         return present_city_list
     else:
         k = 1
-        for i in range(factorial(len(base_city_list) - depth)):
+        i = 0
+        while i < factorial(len(base_city_list) - 1):
             if k == len(base_city_list):
-                break
-            for j in range(factorial(len(base_city_list) - depth - 1)):
-                if checker(present_city_list[i], base_city_list[k]):
-                    break
-                else:
-                    present_city_list[i][depth] = base_city_list[k]
-            k += 1
+                k = 1
+            else:
+                j = 0
+                while j < factorial(len(base_city_list) - (depth + 1)):
+                    if k == len(base_city_list):
+                        k = 1
+                    if checker(present_city_list[i], base_city_list[k]):
+                        present_city_list[i][depth] = base_city_list[k]
+                        i += 1
+                        j += 1
+                    else:
+                        k += 1
+                k += 1
         return combination(base_city_list, present_city_list, depth + 1)
-
-
-def make_city_list(base_city_list, present_city_list, depth):
-    if depth == len(base_city_list):
-        for i in range(factorial(len(base_city_list) - 1)):
-            for j in range(1, len(base_city_list)):
-                if checker(present_city_list[i], base_city_list[j]):
-                    present_city_list[i][depth] = base_city_list[j]
-        return present_city_list
-    else:
-        for i in range(factorial(len(base_city_list) - 1)):
-            for j in range(1, len(base_city_list)):
-                if checker(present_city_list[i], base_city_list[j]):
-                    present_city_list[i][depth] = base_city_list[j]
-                    break
-        return make_city_list(base_city_list, present_city_list, depth + 1)
 
 
 def shortest_path(cost_matrix, all_city_list):
@@ -82,7 +73,5 @@ city_list = [i for i in range(1, number_of_city + 1)]
 init_list = [[1 for i in range(number_of_city)] for j in range(factorial(number_of_city - 1))]
 
 all_city_list = combination(city_list, init_list, 1)
-
-print(all_city_list)
 
 print(shortest_path(cost_matrix, all_city_list))
